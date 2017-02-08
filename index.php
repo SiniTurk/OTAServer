@@ -21,32 +21,63 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-// Get the root of the OTA installation
-define("ROOT", str_replace('index.php', '', $_SERVER['SCRIPT_NAME']));
+// Set the name of the folder, where the builds are stored
+define("BUILD_FOLDER", "builds");
+
+// Get the HTML root of the OTA installation
+define("HTML_ROOT", str_replace('index.php', '', $_SERVER['SCRIPT_NAME']));
+
+// Get the PHP root of the OTA installation
+define("PHP_ROOT", $_SERVER['DOCUMENT_ROOT'].HTML_ROOT);
 
 // Get the query sent as string
-define('QUERY', str_replace(ROOT, '', $_SERVER['REQUEST_URI']));
+define('QUERY', str_replace(HTML_ROOT, '', $_SERVER['REQUEST_URI']));
 
 // Get the query sent as array split by '/'
 define('QUERY_ARR', explode('/', QUERY));
 
-// Get all files in /builds directory
-$builds = array_values(array_diff(scandir('builds'), array('.', '..', '.gitkeep')));
-foreach ($builds as $key=>$build)
+// Get all builds in /builds directory
+$builds = array();
+foreach (array_values(array_diff(scandir(BUILD_FOLDER), array('.', '..', '.gitkeep'))) as $build)
 {
-    $build = str_replace(".zip", "", $build);
-    $builds[$key] = explode("-", $build);
+    // Get build.prop values
+    $buildprops = @file_get_contents("zip://".BUILD_FOLDER."/".$build."#system/build.prop");
+
+    if($buildprops !== FALSE)
+    {
+        // Filter build.prop values
+        $buildprops = preg_replace('/\n\s*\n/', "\n", $buildprops);
+        $buildprops = preg_replace('/\#(.*)\n/', "", $buildprops);
+        $buildprops = explode("\n", $buildprops);
+        $props = array();
+        foreach ($buildprops as $prop)
+        {
+            $props[explode("=", $prop)[0]] = explode("=", $prop)[1];
+        }
+        unset($buildprops, $prop, $props['']);
+
+        $builds[] = array(
+            "filename"     => $build,
+            "device"       => $props['ro.product.device'],
+            "model"        => $props['ro.product.model'],
+            "manufacturer" => $props['ro.product.manufacturer'],
+            "timestamp"    => $props['ro.build.date.utc'],
+            "version"      => $props['ro.build.version.release'],
+            "md5sum"       => md5_file(BUILD_FOLDER."/".$build)
+        );
+    }
 }
 define('BUILDS', $builds);
 unset($build, $builds, $key);
 
 function get_device_builds($device)
 {
+    $builds = array();
     if ($device !== "")
     {
         foreach (BUILDS as $build)
         {
-            if($build[4] === $device)
+            if($build['device'] === $device)
             {
                 $builds[] = $build;
             }
@@ -59,12 +90,11 @@ function get_device_builds($device)
 
     usort($builds, function($a, $b)
     {
-        if ($a[2] == $b[2]) {
+        if ($a['timestamp'] == $b['timestamp']) {
             return 0;
         }
-        return ($a[2] < $b[2]) ? 1 : -1;
+        return ($a['timestamp'] < $b['timestamp']) ? 1 : -1;
     });
-
     return $builds;
 }
 
@@ -79,18 +109,17 @@ if(QUERY_ARR[0] === "api")
         echo "  \"result\": [\n";
         for($key = 0; $key < count($builds); $key++)
         {
-            $buildname = $builds[$key][0]."-".$builds[$key][1]."-".$builds[$key][2]."-".$builds[$key][3]."-".$builds[$key][4].".zip";
             echo "    {\n";
-            echo "      \"name\": \"".$builds[$key][0]."\",\n";
-            echo "      \"version\": \"".$builds[$key][1]."\",\n";
-            echo "      \"date\": \"".$builds[$key][2]."\",\n";
-            echo "      \"channel\": \"".$builds[$key][3]."\",\n";
-            echo "      \"device\": \"".$builds[$key][4]."\",\n";
-            echo "      \"md5sum\": \"".md5_file("builds/".$buildname)."\",\n";
-            echo "      \"filename\": \"".$buildname."\",\n";
-            echo "      \"changelog\": \"".(file_exists($buildname.".txt") ? file_get_contents($buildname.".txt") : "")."\"\n";
+            $counter = 0;
+            foreach ($builds[$key] as $setting=>$value)
+            {
+                $counter++;
+                echo "      \"".$setting."\": \"".$value."\"".($counter < count($builds[$key]) ? "," : "")."\n";
+            }
+            unset($counter);
             echo "    }".($key < count($builds)-1 ? "," : "")."\n";
         }
+        unset($key);
         echo "  ]\n";
     }
     echo "}";
@@ -115,11 +144,10 @@ else
         else
         {
             echo "<table>\n";
-            echo "<tr><th>ROM</th><th>Version</th><th>Date</th><th>Device</th><th>Channel</th><th>Download</th><th>MD5</th></tr>\n";
+            echo "<tr><th>Version</th><th>Date</th><th>Device</th><th>Download</th></tr>\n";
             foreach ($builds as $build)
             {
-                $buildname = $build[0]."-".$build[1]."-".$build[2]."-".$build[3]."-".$build[4].".zip";
-                echo "<tr><td>".$build[0]."</td><td>".$build[1]."</td><td>".$build[2]."</td><td>".$build[4]."</td><td>".$build[3]."</td><td><a href='".ROOT."builds/".$buildname."'>".$buildname."</a></td><td>".md5_file("builds/".$buildname)."</td></tr>\n";
+                echo "<tr><td>".$build['version']."</td><td>".date("Y-m-d h:i", $build['timestamp'])."</td><td>".$build['device']."</td><td><a href='".HTML_ROOT.BUILD_FOLDER."/".$build['filename']."'>".$build['filename']."</a><br><small>MD5: ".$build['md5sum']."</small></td></tr>\n";
             }
             echo "</table>";
         }
@@ -129,12 +157,13 @@ else
 <?php
 }
 
-/*
-// Debug stuff
+/*// Debug stuff
 echo "<pre>";
-echo "ROOT: ".ROOT."\n";
+echo "PHP_ROOT: ".PHP_ROOT."\n";
+echo "HTML_ROOT: ".HTML_ROOT."\n";
 echo "QUERY: ".QUERY."\n";
 echo "QUERY_ARR: ".print_r(QUERY_ARR, true);
 echo "BUILDS: ".print_r(BUILDS, true);
+echo "\$_SERVER: ".print_r($_SERVER, true);
 echo "</pre>";
 */
