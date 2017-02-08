@@ -1,12 +1,7 @@
 # OTA Backend
 To use with my OTA App (or any other OTA App that can use this formatting of the output data)
 
-Builds should go into the builds/ directory and should be named like this:  
-```<name>-<version>-<date>-<channel>-<device>.zip ```
-
-Changelogs for the ROM can be saved as  
-```<name>-<version>-<date>-<channel>-<device>.zip.txt ```
-in plain text
+Builds should go into the builds/ directory. Make sure they have a the build.prop stored inside system/build.prop, else the Server won't recognize the package
 
 ##URL Mapping  
 
@@ -17,7 +12,7 @@ in plain text
 
 ##Contribute
 
-You can find issues and submit them in the Issue Tracker or (if you feel like you can improve this program) fork this project on GitHub and drop me a Pull Request and I will get the changes merged eventually
+You can find issues and submit them in the Issue Tracker or (if you feel like you can improve this program) fork this project on GitHub and drop me a Pull Request and I will get the changes merged after a review
 
 ##License
 
