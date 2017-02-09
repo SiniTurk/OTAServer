@@ -73,11 +73,11 @@ unset($build, $builds, $key);
 function get_device_builds($device)
 {
     $builds = array();
-    if ($device !== "")
+    if (strtolower($device) !== "")
     {
         foreach (BUILDS as $build)
         {
-            if($build['device'] === $device)
+            if(strtolower($build['device']) === strtolower($device))
             {
                 $builds[] = $build;
             }
@@ -98,7 +98,7 @@ function get_device_builds($device)
     return $builds;
 }
 
-if(QUERY_ARR[0] === "api")
+if(strtolower(QUERY_ARR[0]) === "api")
 {
     // Trigger API
     $device = (QUERY_ARR[1] ?: "");
