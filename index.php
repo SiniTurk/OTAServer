@@ -36,6 +36,8 @@ define('QUERY', str_replace(HTML_ROOT, '', $_SERVER['REQUEST_URI']));
 // Get the query sent as array split by '/'
 define('QUERY_ARR', explode('/', QUERY));
 
+require_once 'inc/functions.inc';
+
 // Get all builds in /builds directory
 $builds = array();
 foreach (array_values(array_diff(scandir(BUILD_FOLDER), array('.', '..', '.gitkeep'))) as $build)
@@ -70,39 +72,10 @@ foreach (array_values(array_diff(scandir(BUILD_FOLDER), array('.', '..', '.gitke
 define('BUILDS', $builds);
 unset($build, $builds, $key);
 
-function get_device_builds($device)
-{
-    $builds = array();
-    if (strtolower($device) !== "")
-    {
-        foreach (BUILDS as $build)
-        {
-            if(strtolower($build['device']) === strtolower($device))
-            {
-                $builds[] = $build;
-            }
-        }
-    }
-    else
-    {
-        $builds = BUILDS;
-    }
-
-    usort($builds, function($a, $b)
-    {
-        if ($a['timestamp'] == $b['timestamp']) {
-            return 0;
-        }
-        return ($a['timestamp'] < $b['timestamp']) ? 1 : -1;
-    });
-    return $builds;
-}
-
 if(strtolower(QUERY_ARR[0]) === "api")
 {
     // Trigger API
-    $device = (QUERY_ARR[1] ?: "");
-    $builds = get_device_builds($device);
+    $builds = get_ota_builds(QUERY_ARR[1] ?: false, QUERY_ARR[2] ?: false);
     echo "{\n";
     if(count($builds) !== 0)
     {
@@ -127,8 +100,7 @@ if(strtolower(QUERY_ARR[0]) === "api")
 else
 {
     // Trigger user interface
-    $device = (QUERY_ARR[0] ?: "");
-    $builds = get_device_builds($device);?>
+    $builds = get_ota_builds(QUERY_ARR[0] ?: false, QUERY_ARR[1] ?: false);?>
 <!DOCTYPE html>
 <html>
     <head>
