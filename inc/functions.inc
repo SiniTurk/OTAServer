@@ -23,7 +23,6 @@
 function get_ota_builds($device, $timestamp = false)
 {
     $builds = array();
-
     if ($device)
     {
         foreach (BUILDS as $build)
@@ -48,4 +47,65 @@ function get_ota_builds($device, $timestamp = false)
     });
 
     return $builds;
+}
+
+function get_delta_builds($incremental)
+{
+    $builds = array();
+    if ($incremental)
+    {
+        foreach (BUILDS as $build)
+        {
+            if(strtolower($build['old_incremental']) === $incremental)
+            {
+                $builds[] = $build;
+            }
+        }
+    }
+
+    return $builds;
+}
+
+function does_file_exist($file)
+{
+    try
+    {
+        file_get_contents($file);
+        return true;
+    }
+    catch (Exception $e)
+    {
+        return false;
+    }
+}
+
+function read_buildprop_value($file, $value = false)
+{
+    if(does_file_exist($file))
+    {
+        $buildprops = file_get_contents($file);
+
+        // Filter build.prop values
+        $buildprops = preg_replace('/\n\s*\n/', "\n", $buildprops);
+        $buildprops = preg_replace('/\#(.*)\n/', "", $buildprops);
+        $buildprops = explode("\n", $buildprops);
+        $props = array();
+        foreach ($buildprops as $prop) {
+            $props[explode("=", $prop)[0]] = explode("=", $prop)[1];
+        }
+        unset($buildprops, $prop, $props['']);
+
+        if($value)
+            return ($props[$value] ?: false);
+
+        return $props;
+    }
+
+    return false;
+}
+
+function human_filesize($bytes, $decimals = 2) {
+    $sz = 'BKMGTP';
+    $factor = floor((strlen($bytes) - 1) / 3);
+    return sprintf("%.{$decimals}f", $bytes / pow(1024, $factor)) . @$sz[$factor];
 }
