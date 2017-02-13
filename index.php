@@ -65,7 +65,8 @@ foreach (array_values(array_diff(scandir(BUILD_FOLDER), array('.', '..', '.gitke
             "manufacturer" => $props['ro.product.manufacturer'],
             "timestamp"    => $props['ro.build.date.utc'],
             "version"      => $props['ro.build.version.release'],
-            "md5sum"       => md5_file(BUILD_FOLDER."/".$build)
+            "md5sum"       => md5_file(BUILD_FOLDER."/".$build),
+            "size"         => filesize(BUILD_FOLDER."/".$build)
         );
     }
 }
