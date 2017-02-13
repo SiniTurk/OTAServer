@@ -1,14 +1,19 @@
 # OTA Backend
 To use with my OTA App (or any other OTA App that can use this formatting of the output data)
 
-Builds should go into the builds/ directory. Make sure they have a the build.prop stored inside system/build.prop, else the Server won't recognize the package
+Full builds should go into the builds/ directory. Make sure they have a the build.prop stored inside system/build.prop, else the Server won't recognize the package.  
+Delta builds should go into the deltas/ directory. If the package was built by build/tools/releasetools/ota_from_target_files, it should be working.
+
 
 ##URL Mapping  
 
-```/api``` => All ROMs in JSON format  
-```/api/<codename>``` => All ROMs for the specified device in JSON format  
 ```/``` => All ROMs sorted for Downloading  
-```/<codename>``` => All ROMs the specified device sorted for Downloading 
+```/<codename>``` => All ROMs for the specified device sorted for Downloading  
+```/<codename>/<timestamp>``` => All ROMs for the specified device that are not BEFORE the given timestamp sorted for Downloading  
+```/api``` => All ROMs in JSON format  
+```/api/<codename>``` => All ROMs for the specified device in JSON format
+```/api/<codename>/<timestamp>``` => All ROMs for the specified device that are not BEFORE the given timestamp in JSON format  
+```/delta/<incremental>``` => All Delta packages compatible with the given incremental value (ro.build.version.incremental) in JSON format  
 
 ##Contribute
 

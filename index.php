@@ -4,7 +4,6 @@
  *
  * License: GNU General Public License, Version 3
  **/
-
 /**
  * Copyright 2017 Tim Schumacher
  *
@@ -24,6 +23,9 @@
 // Set the name of the folder, where the builds are stored
 define("BUILD_FOLDER", "builds");
 
+// Set the name of the folder, where the delta updates are stored
+define("DELTA_FOLDER", "deltas");
+
 // Get the HTML root of the OTA installation
 define("HTML_ROOT", str_replace('index.php', '', $_SERVER['SCRIPT_NAME']));
 
@@ -38,36 +40,41 @@ define('QUERY_ARR', explode('/', QUERY));
 
 require_once 'inc/functions.inc';
 
-// Get all builds in /builds directory
+// Get all builds in the specific directory
 $builds = array();
-foreach (array_values(array_diff(scandir(BUILD_FOLDER), array('.', '..', '.gitkeep'))) as $build)
+if (strtolower(QUERY_ARR[0]) === "delta")
 {
-    // Get build.prop values
-    $buildprops = @file_get_contents("zip://".BUILD_FOLDER."/".$build."#system/build.prop");
-
-    if($buildprops !== FALSE)
-    {
-        // Filter build.prop values
-        $buildprops = preg_replace('/\n\s*\n/', "\n", $buildprops);
-        $buildprops = preg_replace('/\#(.*)\n/', "", $buildprops);
-        $buildprops = explode("\n", $buildprops);
-        $props = array();
-        foreach ($buildprops as $prop)
+    foreach (array_values(array_diff(scandir(DELTA_FOLDER), array('.', '..', '.gitkeep'))) as $build) {
+        if (does_file_exist("zip://" . DELTA_FOLDER . "/" . $build . "#META-INF/com/android/metadata"))
         {
-            $props[explode("=", $prop)[0]] = explode("=", $prop)[1];
+            $props = read_buildprop_value("zip://" . DELTA_FOLDER . "/" . $build . "#META-INF/com/android/metadata");
+            $builds[] = array(
+                "filename" => $build,
+                "old_incremental" => $props["pre-build-incremental"],
+                "new_incremental" => $props["post-build-incremental"],
+                "timestamp" => $props['post-timestamp'],
+                "md5sum" => md5_file(DELTA_FOLDER . "/" . $build),
+                "size" => filesize(DELTA_FOLDER . "/" . $build)
+            );
         }
-        unset($buildprops, $prop, $props['']);
+    }
+}
+else {
+    foreach (array_values(array_diff(scandir(BUILD_FOLDER), array('.', '..', '.gitkeep'))) as $build) {
 
-        $builds[] = array(
-            "filename"     => $build,
-            "device"       => $props['ro.product.device'],
-            "model"        => $props['ro.product.model'],
-            "manufacturer" => $props['ro.product.manufacturer'],
-            "timestamp"    => $props['ro.build.date.utc'],
-            "version"      => $props['ro.build.version.release'],
-            "md5sum"       => md5_file(BUILD_FOLDER."/".$build),
-            "size"         => filesize(BUILD_FOLDER."/".$build)
-        );
+        if (does_file_exist("zip://" . BUILD_FOLDER . "/" . $build . "#system/build.prop")) {
+            $props = read_buildprop_value("zip://" . BUILD_FOLDER . "/" . $build . "#system/build.prop");
+
+            $builds[] = array(
+                "filename" => $build,
+                "device" => $props['ro.product.device'],
+                "incremental" => $props['ro.build.version.incremental'],
+                "timestamp" => $props['ro.build.date.utc'],
+                "version" => $props['ro.build.version.release'],
+                "md5sum" => md5_file(BUILD_FOLDER . "/" . $build),
+                "size" => filesize(BUILD_FOLDER . "/" . $build)
+            );
+        }
     }
 }
 define('BUILDS', $builds);
@@ -100,14 +107,40 @@ if(strtolower(QUERY_ARR[0]) === "api")
 }
 else
 {
-    // Trigger user interface
-    $builds = get_ota_builds(QUERY_ARR[0] ?: false, QUERY_ARR[1] ?: false);?>
-<!DOCTYPE html>
-<html>
-    <head>
-        <title>OTA Server</title>
-    </head>
-    <body>
+    if (strtolower(QUERY_ARR[0]) === "delta")
+    {
+        $builds = get_delta_builds(QUERY_ARR[1] ?: false);
+        echo "{\n";
+        if(count($builds) !== 0)
+        {
+            echo "  \"result\": [\n";
+            for($key = 0; $key < count($builds); $key++)
+            {
+                echo "    {\n";
+                $counter = 0;
+                foreach ($builds[$key] as $setting=>$value)
+                {
+                    $counter++;
+                    echo "      \"".$setting."\": \"".$value."\"".($counter < count($builds[$key]) ? "," : "")."\n";
+                }
+                unset($counter);
+                echo "    }".($key < count($builds)-1 ? "," : "")."\n";
+            }
+            unset($key);
+            echo "  ]\n";
+        }
+        echo "}";
+    }
+    else
+    {
+        // Trigger user interface
+        $builds = get_ota_builds(QUERY_ARR[0] ?: false, QUERY_ARR[1] ?: false);?>
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>OTA Server</title>
+        </head>
+        <body>
         <h1>OTA Updates</h1>
         <?php
         if (count($builds) === 0)
@@ -120,14 +153,15 @@ else
             echo "<tr><th>Version</th><th>Date</th><th>Device</th><th>Download</th></tr>\n";
             foreach ($builds as $build)
             {
-                echo "<tr><td>".$build['version']."</td><td>".date("Y-m-d h:i", $build['timestamp'])."</td><td>".$build['device']."</td><td><a href='".HTML_ROOT.BUILD_FOLDER."/".$build['filename']."'>".$build['filename']."</a><br><small>MD5: ".$build['md5sum']."</small></td></tr>\n";
+                echo "<tr><td>".$build['version']."</td><td>".date("Y-m-d h:i", $build['timestamp'])."</td><td>".$build['device']."</td><td><a href='".HTML_ROOT.BUILD_FOLDER."/".$build['filename']."'>".$build['filename']."</a>  (".human_filesize($build["size"]).")<br><small>MD5: ".$build['md5sum']."</small></td></tr>\n";
             }
             echo "</table>";
         }
-    ?>
-    </body>
-</html>
-<?php
+        ?>
+        </body>
+        </html>
+        <?php
+    }
 }
 
 /*// Debug stuff
