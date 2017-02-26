@@ -84,52 +84,15 @@ if(strtolower(QUERY_ARR[0]) === "api")
 {
     // Trigger API
     $builds = get_ota_builds(QUERY_ARR[1] ?: false, QUERY_ARR[2] ?: false);
-    echo "{\n";
-    if(count($builds) !== 0)
-    {
-        echo "  \"result\": [\n";
-        for($key = 0; $key < count($builds); $key++)
-        {
-            echo "    {\n";
-            $counter = 0;
-            foreach ($builds[$key] as $setting=>$value)
-            {
-                $counter++;
-                echo "      \"".$setting."\": \"".$value."\"".($counter < count($builds[$key]) ? "," : "")."\n";
-            }
-            unset($counter);
-            echo "    }".($key < count($builds)-1 ? "," : "")."\n";
-        }
-        unset($key);
-        echo "  ]\n";
-    }
-    echo "}";
+    echo json_encode($builds);
 }
 else
 {
     if (strtolower(QUERY_ARR[0]) === "delta")
     {
+        // Trigger Delta API
         $builds = get_delta_builds(QUERY_ARR[1] ?: false);
-        echo "{\n";
-        if(count($builds) !== 0)
-        {
-            echo "  \"result\": [\n";
-            for($key = 0; $key < count($builds); $key++)
-            {
-                echo "    {\n";
-                $counter = 0;
-                foreach ($builds[$key] as $setting=>$value)
-                {
-                    $counter++;
-                    echo "      \"".$setting."\": \"".$value."\"".($counter < count($builds[$key]) ? "," : "")."\n";
-                }
-                unset($counter);
-                echo "    }".($key < count($builds)-1 ? "," : "")."\n";
-            }
-            unset($key);
-            echo "  ]\n";
-        }
-        echo "}";
+        echo json_encode($builds);
     }
     else
     {
