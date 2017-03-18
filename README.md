@@ -17,7 +17,7 @@ Delta builds should go into the deltas/ directory. If the package was built by b
 
 ##Contribute
 
-You can find issues and submit them in the Issue Tracker or (if you feel like you can improve this program) fork this project on GitHub and drop me a Pull Request and I will get the changes merged after a review
+You can find issues and submit them in the Issue Tracker or (if you feel like you can improve this program) fork this project on GitHub (always fork the "develop" branch) and drop me a Pull Request and I will get the changes merged after a review
 
 ##License
 
