@@ -9,10 +9,10 @@ Delta builds should go into the deltas/ directory. If the package was built by b
 
 ```/``` => All ROMs sorted for Downloading  
 ```/<codename>``` => All ROMs for the specified device sorted for Downloading  
-```/<codename>/<timestamp>``` => All ROMs for the specified device that are not BEFORE the given timestamp sorted for Downloading  
+```/<codename>/<timestamp>``` => All ROMs for the specified device that are not **BEFORE** the given timestamp sorted for Downloading  
 ```/api``` => All ROMs in JSON format  
 ```/api/<codename>``` => All ROMs for the specified device in JSON format
-```/api/<codename>/<timestamp>``` => All ROMs for the specified device that are not BEFORE the given timestamp in JSON format  
+```/api/<codename>/<timestamp>``` => All ROMs for the specified device that are not **BEFORE** the given timestamp in JSON format  
 ```/delta/<incremental>``` => All Delta packages compatible with the given incremental value (ro.build.version.incremental) in JSON format  
 
 ## Contribute
